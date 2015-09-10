@@ -273,7 +273,7 @@ module Toshi
         }
 
         # create address ledger entries for known addresses
-        address_index, entries = 0, []
+        _, entries = 0, []
         address_ids.each{|addr, addr_id|
           input_indexes[addr].each{|input_index|
             input = inputs[input_index]
@@ -474,7 +474,6 @@ module Toshi
 
         # gather inputs and outputs
         Toshi.db[:address_ledger_entries].where(transaction_id: transaction_ids).each{|entry|
-          transaction_id = entry[:transaction_id]
           if entry[:input_id]
             input_id = entry[:input_id]
             input_ids << input_id

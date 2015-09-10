@@ -18,11 +18,11 @@ module Toshi
       end
 
       def bitcoin_tx
-        Bitcoin::P::Tx.new(UnconfirmedRawTransaction.where(hsh: hsh).first.payload)
+        Bitcoin::P::Tx.new(raw.payload)
       end
 
       def raw
-        Toshi::Models::UnconfirmedRawTransaction.where(hsh: hsh).first
+        UnconfirmedRawTransaction.where(hsh: hsh).first
       end
 
       def inputs
@@ -48,7 +48,6 @@ module Toshi
       end
 
       def previous_outputs
-        prev_outs = []
         # FIXME: I really need to knock this off and learn the Sequel gem.
         query = "select unconfirmed_outputs.id,
                         unconfirmed_outputs.hsh,
@@ -360,7 +359,6 @@ module Toshi
 
         # gather inputs and outputs
         Toshi.db[:unconfirmed_ledger_entries].where(transaction_id: transaction_ids).each{|entry|
-          transaction_id = entry[:transaction_id]
           if entry[:input_id]
             input_id = entry[:input_id]
             input_ids << input_id
