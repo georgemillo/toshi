@@ -65,7 +65,7 @@ module Toshi
         bh && bh.height
       end
       return height if height
-      b = Toshi::Models::Block.where(hsh: hash).first
+      b = Toshi::Models::Block.find(hsh: hash)
       b ? b.height : nil
     end
 
@@ -76,7 +76,7 @@ module Toshi
       if Toshi::Models::Block.where(hsh: hash).empty?
         return nil
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return nil
       end
@@ -96,7 +96,7 @@ module Toshi
       if !block
         return [nil, nil]
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return [nil, nil]
       end
@@ -113,7 +113,7 @@ module Toshi
       if Toshi::Models::Block.orphan_branch.where(hsh: hash).empty?
         return nil
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return nil
       end
@@ -130,7 +130,7 @@ module Toshi
 
     # Loads raw block (with unknown status: could be completely invalid)
     def raw_block_for_hash(hash)
-      stored_raw_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_raw_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_raw_block
         return nil
       end
@@ -161,7 +161,7 @@ module Toshi
         end
       end
       return work if work
-      blk = Toshi::Models::Block.where(hsh: hash).first
+      blk = Toshi::Models::Block.find(hsh: hash)
       return 0 if !blk
       blk.block_work # Not to be confused with Bitcoin::Protocol::Block#block_work which is per-block work
     end
@@ -606,7 +606,7 @@ module Toshi
 
       # Try to find in DB.
       # FIXME: This is only needed to support tests calling are_inputs_standard? directly.
-      if for_test && out = Toshi::Models::Output.where(hsh: txhash, position: out_index).first
+      if for_test && out = Toshi::Models::Output.find(hsh: txhash, position: out_index)
         txout = Bitcoin::Protocol::TxOut.new(out.amount, out.script)
         if txout
           # cache the result
@@ -634,7 +634,7 @@ module Toshi
 
       hash = Toshi::Utils.bin_to_hex_hash(binary_tx_hash)
 
-      result = if dbtx = Toshi::Models::RawTransaction.where(hsh: hash).first
+      result = if dbtx = Toshi::Models::RawTransaction.find(hsh: hash)
                  dbtx.bitcoin_tx.is_coinbase?
                elsif tx = tx_in_current_block(hash)
                  tx.is_coinbase?
@@ -649,7 +649,7 @@ module Toshi
     # Returns the height of the transaction (height of the block in which it is included)
     def height_for_tx(binary_tx_hash)
       hash = Toshi::Utils.bin_to_hex_hash(binary_tx_hash)
-      dbtx = Toshi::Models::Transaction.where(hsh: hash).first
+      dbtx = Toshi::Models::Transaction.find(hsh: hash)
       if !dbtx
         if tx = tx_in_current_block(hash)
           return 1 + self.height_for_block(@current_block.prev_block_hex)
@@ -688,7 +688,7 @@ module Toshi
 
     # Removes orphan transaction if it ends up failing validation (for reasons other than missing inputs)
     def remove_orphan_tx(hash)
-      t = Toshi::Models::Transaction.where(hsh: hash).first
+      t = Toshi::Models::Transaction.find(hsh: hash)
       if t
         t.destroy
       end

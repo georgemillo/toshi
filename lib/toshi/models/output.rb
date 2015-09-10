@@ -14,7 +14,7 @@ module Toshi
       end
 
       def transaction
-        @transaction ||= Transaction.where(hsh: hsh).first
+        @transaction ||= Transaction.find(hsh: hsh)
       end
 
       def btc

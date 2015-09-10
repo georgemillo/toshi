@@ -78,7 +78,7 @@ module Toshi
       if @debug
         log "<< getblocks: ["
         locator.each_with_index{|hsh,idx|
-          block = Toshi::Models::Block.where(hsh: hsh).first
+          block = Toshi::Models::Block.find(hsh: hsh)
           log " #{idx}: #{hsh}, branch: #{block.branch_name}, height: #{block.height}" if block
         }
         log "]"
@@ -99,10 +99,10 @@ module Toshi
       # if none of the hashes are in our main branch, start from the genesis
       # block
       b = Toshi::Models::Block.main_branch.where(prev_block: hashes).order(:height).last ||
-        Toshi::Models::Block.where(hsh: Bitcoin.network[:genesis_hash]).first
+        Toshi::Models::Block.find(hsh: Bitcoin.network[:genesis_hash])
       blocks = []
       while blocks.size < 2000 && b && b.hsh != stophash
-        blocks << Toshi::Models::RawBlock.where(hsh: b.hsh).first.bitcoin_block
+        blocks << Toshi::Models::RawBlock.find(hsh: b.hsh).bitcoin_block
         b = Toshi::Models::Block.main_branch.where(prev_block: b.hsh).first
       end
       pkt = Bitcoin::Protocol.headers_pkt(@version.version, blocks)
@@ -213,7 +213,7 @@ module Toshi
 
     def on_block(blk)
       log ">> block: #{blk.hash} (#{blk.payload.size} bytes)"
-      unless !Toshi::Models::RawBlock.where(hsh: blk.hash).empty?
+      if !Toshi::Models::RawBlock.find(hsh: blk.hash)
         Toshi::Models::RawBlock.create(hsh: blk.hash, payload: Sequel.blob((blk.payload || blk.to_payload)))
       end
 
