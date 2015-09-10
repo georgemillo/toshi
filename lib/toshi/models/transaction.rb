@@ -23,7 +23,7 @@ module Toshi
       end
 
       def bitcoin_tx
-        Bitcoin::P::Tx.new(RawTransaction.where(hsh: hsh).first.payload)
+        Bitcoin::P::Tx.new(raw.payload)
       end
 
       def confirmations
@@ -51,7 +51,7 @@ module Toshi
       end
 
       def raw
-        Toshi::Models::RawTransaction.where(hsh: hsh).first
+        RawTransaction.where(hsh: hsh).first
       end
 
       def self.from_hsh(hash)

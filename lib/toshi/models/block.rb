@@ -61,7 +61,7 @@ module Toshi
       end
 
       def bitcoin_block
-        Bitcoin::P::Block.new(RawBlock.where(hsh: hsh).first.payload)
+        Bitcoin::P::Block.new(raw.payload)
       end
 
       def branch_name
@@ -81,7 +81,7 @@ module Toshi
       end
 
       def previous
-        @previous_block ||= Block.where(hsh: prev_block).first
+        @previous_block ||= previous_blocks.first
       end
 
       def previous_blocks
@@ -89,7 +89,7 @@ module Toshi
       end
 
       def next
-        @next_block ||= Block.where(prev_block: hsh).first
+        @next_block ||= next_blocks.first
       end
 
       def next_blocks
@@ -117,7 +117,7 @@ module Toshi
       end
 
       def raw
-        Toshi::Models::RawBlock.where(hsh: hsh).first
+        RawBlock.where(hsh: hsh).first
       end
 
       # calculate additional fields not part of the protocol
