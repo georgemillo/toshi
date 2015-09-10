@@ -54,33 +54,13 @@ module Toshi
 
       # get latest block or search by hash or height
       get '/blocks/:hash.?:format?' do
-        if params[:hash].to_s == 'latest'
-          @block = Toshi::Models::Block.head
-        elsif params[:hash].to_s.size < 64 && (Integer(params[:hash]) rescue false)
-          @block = Toshi::Models::Block.where(height: params[:hash], branch: 0).first
-        else
-          @block = Toshi::Models::Block.where(hsh: params[:hash]).first
-        end
-        raise NotFoundError unless @block
-
-        case format
-        when 'json'; json(@block.to_hash)
-        when 'hex';  @block.raw.payload.unpack("H*")[0]
-        when 'bin';  @block.raw.payload
-        else raise InvalidFormatError
-        end
+        @block = load_block
+        format_data(@block, format)
       end
 
       # get block transactions
       get '/blocks/:hash/transactions.?:format?' do
-        if params[:hash].to_s == 'latest'
-          @block = Toshi::Models::Block.head
-        elsif params[:hash].to_s.size < 64 && (Integer(params[:hash]) rescue false)
-          @block = Toshi::Models::Block.where(height: params[:hash], branch: 0).first
-        else
-          @block = Toshi::Models::Block.where(hsh: params[:hash]).first
-        end
-        raise NotFoundError unless @block
+        @block = load_block
 
         case format
         when 'json'
@@ -136,12 +116,7 @@ module Toshi
         @tx ||= (params[:hash].bytesize == 64 && Toshi::Models::UnconfirmedTransaction.where(hsh: params[:hash]).first)
         raise NotFoundError unless @tx
 
-        case format
-        when 'json'; json(@tx.to_hash)
-        when 'hex';  @tx.raw.payload.unpack("H*")[0]
-        when 'bin';  @tx.raw.payload
-        else raise InvalidFormatError
-        end
+        format_data(@tx, format)
       end
 
       ####
@@ -291,7 +266,30 @@ module Toshi
           raise InvalidFormatError
         end
       end
-    end
 
+
+      private
+
+      def load_block
+        if params[:hash].to_s == 'latest'
+          block = Models::Block.head
+        elsif params[:hash].to_s.size < 64 && (Integer(params[:hash]) rescue false)
+          block = Models::Block.find(height: params[:hash], branch: 0)
+        else
+          block = Models::Block.find(hsh: params[:hash])
+        end
+        block || raise(NotFoundError)
+      end
+
+      def format_data(data, format)
+        case format
+        when 'json' then json(data.to_hash)
+        when 'hex'  then data.raw.payload.unpack("H*")[0]
+        when 'bin'  then data.raw.payload
+        else raise InvalidFormatError
+        end
+      end
+
+    end
   end
 end
