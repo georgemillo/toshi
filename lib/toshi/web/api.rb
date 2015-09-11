@@ -271,13 +271,13 @@ module Toshi
       private
 
       def load_block
-        if params[:hash].to_s == 'latest'
-          block = Models::Block.head
-        elsif params[:hash].to_s.size < 64 && (Integer(params[:hash]) rescue false)
-          block = Models::Block.find(height: params[:hash], branch: 0)
-        else
-          block = Models::Block.find(hsh: params[:hash])
-        end
+        block = if hash == 'latest'
+                  Models::Block.head
+                elsif hash =~ /\A\d#{64}\z/
+                  Models::Block.find(height: params[:hash], branch: 0)
+                else
+                  Models::Block.find(hsh: params[:hash])
+                end
         block || raise(NotFoundError)
       end
 
