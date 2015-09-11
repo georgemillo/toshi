@@ -49,7 +49,7 @@ module Toshi
   end
 
   def self.env
-    @env ||= (ENV['TOSHI_ENV'] || ENV['RACK_ENV'] || 'development').to_sym
+    @env ||= Env.new((ENV['TOSHI_ENV'] || ENV['RACK_ENV'] || :development).to_sym)
   end
 
   def self.root
@@ -99,6 +99,7 @@ module Toshi
 end
 
 require "toshi/db"
+require "toshi/env"
 require "toshi/mq"
 require "toshi/utils"
 require "toshi/workers/block_worker"

@@ -14,12 +14,11 @@ module Toshi
 
     # Load the appropriate genesis block for the current network.
     def load_genesis_block
-      self.transaction({}) do
+      self.transaction do
         genesis_hash = Bitcoin.network[:genesis_hash]
-        if ([:regtest, :mainnet].include?(Bitcoin.network_name) ||
-            ![:test].include?(Toshi.env)) &&
-            Toshi::Models::Block.head == nil &&
-            Toshi::Models::Block.where(hsh: genesis_hash).empty?
+        if ([:regtest, :mainnet].include?(Bitcoin.network_name) || !Toshi.env.test?) &&
+            Toshi::Models::Block.head.nil? &&
+            !Toshi::Models::Block.find(hsh: genesis_hash)
           logger.info{ "Inserting genesis block #{genesis_hash}" }
           path_to_genesis_block = "config/blocks/#{genesis_hash}.json"
           genesis_block = Bitcoin::Protocol::Block.from_json_file(path_to_genesis_block)
