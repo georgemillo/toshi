@@ -1,6 +1,7 @@
 module Toshi
   module Models
     class UnconfirmedTransaction < Sequel::Model
+      include TransactionShared
 
       MEMORY_POOL   = 1 # same rules for inclusion as bitcoind's memory pool (was individually relayed to us and is not in a
                         # main block yet, or is in a now disconnected former main branch block)
@@ -12,22 +13,6 @@ module Toshi
         ORPHAN_POOL   => 'orphan',
         CONFLICT_POOL => 'conflict'
       }
-
-      def pool_name
-        POOL_TO_NAME_TABLE[pool] || "unknown"
-      end
-
-      def bitcoin_tx
-        Bitcoin::P::Tx.new(UnconfirmedRawTransaction.where(hsh: hsh).first.payload)
-      end
-
-      def raw
-        Toshi::Models::UnconfirmedRawTransaction.where(hsh: hsh).first
-      end
-
-      def inputs
-        UnconfirmedInput.where(hsh: hsh).order(:position)
-      end
 
       def mark_spent_outputs
         # FIXME: there's probably a nicer way to do this with the interface
@@ -41,10 +26,6 @@ module Toshi
                                            unconfirmed_inputs.index = unconfirmed_outputs.position) as spent_outputs
                         where unconfirmed_outputs.id = spent_outputs.output_id"
         Toshi.db.run(query)
-      end
-
-      def outputs
-        UnconfirmedOutput.where(hsh: hsh).order(:position)
       end
 
       def previous_outputs
@@ -68,20 +49,12 @@ module Toshi
         UnconfirmedTransaction.where(pool: MEMORY_POOL)
       end
 
-      def is_coinbase?
-        inputs_count == 1 && inputs.first.coinbase?
-      end
-
       def is_orphan?
         pool == ORPHAN_POOL
       end
 
       def in_memory_pool?
         pool == MEMORY_POOL
-      end
-
-      def self.from_hsh(hash)
-        UnconfirmedTransaction.where(hsh: hash).first
       end
 
       def self.create_inputs(tx)
@@ -347,11 +320,7 @@ module Toshi
         Toshi.db[:unconfirmed_ledger_entries].multi_insert(entries)
       end
 
-      def to_hash
-        self.class.to_hash_collection([self]).first
-      end
-
-      def self.to_hash_collection(transactions)
+      def self.to_hash_collection(transactions, options={})
         return [] unless transactions.any?
         transaction_ids = transactions.map{|transaction| transaction.id }
 
@@ -517,15 +486,21 @@ module Toshi
         end
       end
 
-      def to_json(options={})
-        to_hash.to_json
+
+      protected
+
+      def raw_class
+        UnconfirmedRawTransaction
       end
 
-      # See: https://wiki.postgresql.org/wiki/Slow_Counting
-      def self.total_count
-        res = Toshi.db.fetch("SELECT reltuples AS total FROM pg_class WHERE relname = 'unconfirmed_transactions'").first
-        res[:total].to_i
+      def input_class
+        UnconfirmedInput
       end
+
+      def output_class
+        UnconfirmedOutput
+      end
+
     end
   end
 end

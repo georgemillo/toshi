@@ -1,6 +1,7 @@
 module Toshi
   module Models
     class Transaction < Sequel::Model
+      include TransactionShared
 
       TIP_POOL      = 1 # same rules for inclusion as bitcoind's pcoinsTip view (on the main branch)
       BLOCK_POOL    = 2 # txs only associated with non-main branch blocks
@@ -18,28 +19,8 @@ module Toshi
         blocks_dataset.where(branch: Block::MAIN_BRANCH).first
       end
 
-      def pool_name
-        POOL_TO_NAME_TABLE[pool] || "unknown"
-      end
-
-      def bitcoin_tx
-        Bitcoin::P::Tx.new(RawTransaction.where(hsh: hsh).first.payload)
-      end
-
       def confirmations
         block.confirmations rescue 0
-      end
-
-      def inputs
-        Input.where(hsh: hsh).order(:position)
-      end
-
-      def outputs
-        Output.where(hsh: hsh).order(:position)
-      end
-
-      def is_coinbase?
-        inputs_count == 1 && inputs.first.coinbase?
       end
 
       def in_view?
@@ -48,14 +29,6 @@ module Toshi
 
       def in_orphan_block?
         blocks_dataset.where(branch: Block::ORPHAN_BRANCH).any?
-      end
-
-      def raw
-        Toshi::Models::RawTransaction.where(hsh: hsh).first
-      end
-
-      def self.from_hsh(hash)
-        Transaction.where(hsh: hash).first
       end
 
       def self.create_inputs(tx, branch, output_cache)
@@ -295,7 +268,7 @@ module Toshi
             input, amount = inputs[input_index], 0
             if input[:index] == 0xffffffff && input[:prev_out] == Input::INPUT_COINBASE_HASH
               # handle coinbase inputs
-              tx = Transaction.from_hsh(input[:hsh])
+              tx = self.from_hsh(input[:hsh])
               amount = (tx.total_out_value - block_fees) * -1
             else
               binary_hash = [input[:prev_out]].pack('H*').reverse
@@ -440,11 +413,6 @@ module Toshi
         transaction
       end
 
-      def to_hash(options = {})
-        options[:show_block_info] ||= true
-        self.class.to_hash_collection([self], options).first
-      end
-
       # 4 queries per transaction array (7 if block info also requested)
       def self.to_hash_collection(transactions, options = {})
         return [] unless transactions.any?
@@ -574,17 +542,6 @@ module Toshi
         txs
       end
 
-      def to_json(options={})
-        to_hash(options).to_json
-      end
-
-      # This is much faster than a count(*) on the table.
-      # See: https://wiki.postgresql.org/wiki/Slow_Counting
-      def self.total_count
-        res = Toshi.db.fetch("SELECT reltuples AS total FROM pg_class WHERE relname = 'transactions'").first
-        res[:total].to_i
-      end
-
       # times are expressed as epoch timestamps; amount is satoshis.
       def self.transactions_matching_date_range_and_value(start_time, end_time, amount)
         # first we need to find the block heights
@@ -595,6 +552,22 @@ module Toshi
           .where(pool: Transaction::TIP_POOL).where("height >= #{start_block.height}")
           .where("height <= #{end_block.height}").where("amount = #{amount}").select_map(:hsh)
       end
+
+
+      protected
+
+      def raw_class
+        RawTransaction
+      end
+
+      def input_class
+        Input
+      end
+
+      def output_class
+        Output
+      end
+
     end
   end
 end
