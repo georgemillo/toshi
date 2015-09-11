@@ -64,7 +64,7 @@ module Toshi
         bh && bh.height
       end
       return height if height
-      b = Toshi::Models::Block.where(hsh: hash).first
+      b = Toshi::Models::Block.find(hsh: hash)
       b ? b.height : nil
     end
 
@@ -75,7 +75,7 @@ module Toshi
       if Toshi::Models::Block.where(hsh: hash).empty?
         return nil
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return nil
       end
@@ -86,8 +86,7 @@ module Toshi
     # Only if it is a valid block on main chain or side chain.
     # Orphan block is not returned.
     def valid_block_for_hash(hash)
-      block, created_at = valid_block_for_hash_with_created_at(hash)
-      block
+      valid_block_for_hash_with_created_at(hash)[0]
     end
 
     def valid_block_for_hash_with_created_at(hash)
@@ -95,7 +94,7 @@ module Toshi
       if !block
         return [nil, nil]
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return [nil, nil]
       end
@@ -112,7 +111,7 @@ module Toshi
       if Toshi::Models::Block.orphan_branch.where(hsh: hash).empty?
         return nil
       end
-      stored_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_block
         return nil
       end
@@ -129,7 +128,7 @@ module Toshi
 
     # Loads raw block (with unknown status: could be completely invalid)
     def raw_block_for_hash(hash)
-      stored_raw_block = Toshi::Models::RawBlock.where(hsh: hash).first
+      stored_raw_block = Toshi::Models::RawBlock.find(hsh: hash)
       if !stored_raw_block
         return nil
       end
@@ -160,7 +159,7 @@ module Toshi
         end
       end
       return work if work
-      blk = Toshi::Models::Block.where(hsh: hash).first
+      blk = Toshi::Models::Block.find(hsh: hash)
       return 0 if !blk
       blk.block_work # Not to be confused with Bitcoin::Protocol::Block#block_work which is per-block work
     end
@@ -362,6 +361,7 @@ module Toshi
 
     # This only affects the database records.
     def mark_outputs_as_spent(output_ids)
+      return unless output_ids.any?
       self.class.remove_from_utxo_set(output_ids, spent=true)
 
       # mark these spent all at once
@@ -383,6 +383,7 @@ module Toshi
 
     # This only affects the database records.
     def mark_outputs_as_unspent(output_ids, on_disconnect)
+      return unless output_ids.any?
       self.class.add_to_utxo_set(output_ids, on_disconnect)
 
       # mark these unspent all at once
@@ -399,6 +400,7 @@ module Toshi
 
     # This only affects the database records.
     def mark_outputs_as_unavailable(output_ids)
+      return unless output_ids.any?
       self.class.remove_from_utxo_set(output_ids, spent=false)
 
       # mark these as side branch outputs all at once
@@ -408,46 +410,18 @@ module Toshi
 
     # Update all the database records for outputs in a block.
     def update_outputs_on_connect_block(block)
-      spent_output_ids, unspent_output_ids = [], []
-      block.tx.each do |tx|
-        if !tx.is_coinbase?
-          tx.inputs.each do |txin|
-            if output = self.output_from_model_cache(txin.prev_out, txin.prev_out_index)
-              spent_output_ids << output.id
-            end
-          end
-        end
-        tx.outputs.each_with_index do |txout, index|
-          if output = self.output_from_model_cache(tx.binary_hash, index)
-            unspent_output_ids << output.id
-          end
-        end
-      end
+      spent_output_ids, unspent_output_ids = prev_and_next_output_ids(block)
 
-      mark_outputs_as_unspent(unspent_output_ids, on_disconnect=false) if unspent_output_ids.any?
-      mark_outputs_as_spent(spent_output_ids) if spent_output_ids.any?
+      mark_outputs_as_unspent(unspent_output_ids, on_disconnect=false)
+      mark_outputs_as_spent(spent_output_ids)
     end
 
     # Update all the database records for outputs in a block.
     def update_outputs_on_disconnect_block(block)
-      unspent_output_ids, unavailable_output_ids = [], []
-      block.tx.each do |tx|
-        if !tx.is_coinbase?
-          tx.inputs.each do |txin|
-            if output = self.output_from_model_cache(txin.prev_out, txin.prev_out_index)
-              unspent_output_ids << output.id
-            end
-          end
-        end
-        tx.outputs.each_with_index do |txout, index|
-          if output = self.output_from_model_cache(tx.binary_hash, index)
-            unavailable_output_ids << output.id
-          end
-        end
-      end
+      unspent_output_ids, unavailable_output_ids = prev_and_next_output_ids(block)
 
-      mark_outputs_as_unspent(unspent_output_ids, on_disconnect=true) if unspent_output_ids.any?
-      mark_outputs_as_unavailable(unavailable_output_ids) if unavailable_output_ids.any?
+      mark_outputs_as_unspent(unspent_output_ids, on_disconnect=true)
+      mark_outputs_as_unavailable(unavailable_output_ids)
     end
 
     # To implement BIP30, must be equivalent to (view.HaveCoins(hash) && !view.GetCoins(hash).IsPruned())
@@ -605,7 +579,7 @@ module Toshi
 
       # Try to find in DB.
       # FIXME: This is only needed to support tests calling are_inputs_standard? directly.
-      if for_test && out = Toshi::Models::Output.where(hsh: txhash, position: out_index).first
+      if for_test && out = Toshi::Models::Output.find(hsh: txhash, position: out_index)
         txout = Bitcoin::Protocol::TxOut.new(out.amount, out.script)
         if txout
           # cache the result
@@ -633,7 +607,7 @@ module Toshi
 
       hash = Toshi::Utils.bin_to_hex_hash(binary_tx_hash)
 
-      result = if dbtx = Toshi::Models::RawTransaction.where(hsh: hash).first
+      result = if dbtx = Toshi::Models::RawTransaction.find(hsh: hash)
                  dbtx.bitcoin_tx.is_coinbase?
                elsif tx = tx_in_current_block(hash)
                  tx.is_coinbase?
@@ -648,9 +622,9 @@ module Toshi
     # Returns the height of the transaction (height of the block in which it is included)
     def height_for_tx(binary_tx_hash)
       hash = Toshi::Utils.bin_to_hex_hash(binary_tx_hash)
-      dbtx = Toshi::Models::Transaction.where(hsh: hash).first
+      dbtx = Toshi::Models::Transaction.find(hsh: hash)
       if !dbtx
-        if tx = tx_in_current_block(hash)
+        if tx_in_current_block(hash)
           return 1 + self.height_for_block(@current_block.prev_block_hex)
         end
         return 0xffffffff
@@ -662,7 +636,7 @@ module Toshi
 
     # move a coinbase tx to the block pool on disconnect
     def move_coinbase_tx_to_block_pool(tx_hash)
-      Toshi::Models::Transaction.where(hsh: tx_hash).update({pool: Toshi::Models::Transaction::BLOCK_POOL})
+      Toshi::Models::Transaction.where(hsh: tx_hash).update(pool: Toshi::Models::Transaction::BLOCK_POOL)
     end
 
     # Orphan blocks
@@ -678,17 +652,16 @@ module Toshi
     # Returns enumerator of orphan blocks with a given parent hash
     def orphan_blocks_with_parent(hash)
       # For now, return simply an array.
-      orphans = []
-      Toshi::Models::Block.where(prev_block: hash, branch: Toshi::Models::Block::ORPHAN_BRANCH).each do |stored_orphan|
-        orphans << self.raw_block_for_hash(stored_orphan.hsh)
+      Toshi::Models::Block.where(
+        prev_block: hash, branch: Toshi::Models::Block::ORPHAN_BRANCH
+      ).map do |stored_orphan|
+        self.raw_block_for_hash(stored_orphan.hsh)
       end
-      orphans
     end
 
     # Removes orphan transaction if it ends up failing validation (for reasons other than missing inputs)
     def remove_orphan_tx(hash)
-      t = Toshi::Models::Transaction.where(hsh: hash).first
-      if t
+      if t = Toshi::Models::Transaction.find(hsh: hash)
         t.destroy
       end
     end
@@ -707,5 +680,30 @@ module Toshi
         @prevent_index_access = false
       end
     end
+
+    private
+
+
+    def prev_and_next_output_ids(block)
+      prev_ids, next_ids = [], []
+      block.tx.each do |tx|
+        tx.outputs.each_with_index do |_, index|
+          if output = self.output_from_model_cache(tx.binary_hash, index)
+            next_ids << output.id
+          end
+        end
+
+        next if tx.is_coinbase?
+
+        tx.inputs.each do |txin|
+          if output = self.output_from_model_cache(txin.prev_out, txin.prev_out_index)
+            prev_ids << output.id
+          end
+        end
+      end
+      [prev_ids, next_ids]
+    end
+
+
   end
 end

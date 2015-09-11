@@ -129,7 +129,7 @@ module Toshi
 
       end # synchronized
       return accepted
-    rescue ValidationError, TxValidationError => e
+    rescue ValidationError, TxValidationError
       raise if raise_errors
       accepted
     end
@@ -153,7 +153,6 @@ module Toshi
     # Returns true if transaction is valid if included in the next block.
     # See bool AcceptToMemoryPool() in bitcoind.
     def accept_to_memory_pool(tx, expect_tip=false, raise_errors=true, on_disconnect=false)
-      start_time = Time.now
       state = ValidationState.new
 
       logger.debug{ "tx: #{tx.hash} start processing" }
@@ -1067,7 +1066,6 @@ module Toshi
         # This doesn't trigger the DoS code on purpose; if it did, it would make it easier
         # for an attacker to attempt to split the network.
         raise TxValidationError, "CheckInputs() : #{tx.hash} inputs unavailable"
-        return false
       end
 
       # Get the height for the current block
@@ -1252,7 +1250,7 @@ module Toshi
         end
       end
       true
-    rescue => ex
+    rescue
       # catch parsing errors
       false
     end

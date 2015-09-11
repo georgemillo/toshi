@@ -9,7 +9,7 @@ module Toshi
 
       def perform(block_hash, _sender)
         if Toshi::Models::Block.main_branch.where(hsh: block_hash).empty? &&
-          raw_block = Toshi::Models::RawBlock.where(hsh: block_hash).first
+          raw_block = Toshi::Models::RawBlock.find(hsh: block_hash)
 
           begin
             result = processor.process_block(raw_block.bitcoin_block, raise_error=true)
@@ -19,7 +19,7 @@ module Toshi
           end
 
           if result
-            block = Toshi::Models::Block.where(hsh: block_hash).first
+            block = Toshi::Models::Block.find(hsh: block_hash)
             if block.previous.nil? || block.previous.is_orphan_chain?
               # if we just persisted this block as an orphan we should send another
               # 'getblocks' back to the peer who sent us this block.

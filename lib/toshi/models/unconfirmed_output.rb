@@ -8,11 +8,11 @@ module Toshi
                    :join_table => :unconfirmed_addresses_outputs
 
       def transaction
-        @transaction ||= UnconfirmedTransaction.where(hsh: hsh).first
+        @transaction ||= UnconfirmedTransaction.find(hsh: hsh)
       end
 
       def self.prevout(txin)
-        UnconfirmedOutput.where(hsh: txin.previous_output, position: txin.prev_out_index).first
+        UnconfirmedOutput.find(hsh: txin.previous_output, position: txin.prev_out_index)
       end
 
       def btc

@@ -27,7 +27,7 @@ module Toshi
       attr_reader :connection
 
       def self.get(ip)
-        peer = Peer.where(ip: ip).first
+        peer = Peer.find(ip: ip)
         peer = Peer.find_or_create(ip: ip, port: Bitcoin.network[:default_port], services: 1, last_seen: Time.now, connected: false) if !peer
         return nil if peer.connected
         peer

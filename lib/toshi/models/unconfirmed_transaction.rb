@@ -18,11 +18,11 @@ module Toshi
       end
 
       def bitcoin_tx
-        Bitcoin::P::Tx.new(UnconfirmedRawTransaction.where(hsh: hsh).first.payload)
+        Bitcoin::P::Tx.new(raw.payload)
       end
 
       def raw
-        Toshi::Models::UnconfirmedRawTransaction.where(hsh: hsh).first
+        UnconfirmedRawTransaction.find(hsh: hsh)
       end
 
       def inputs
@@ -48,7 +48,6 @@ module Toshi
       end
 
       def previous_outputs
-        prev_outs = []
         # FIXME: I really need to knock this off and learn the Sequel gem.
         query = "select unconfirmed_outputs.id,
                         unconfirmed_outputs.hsh,
@@ -81,7 +80,7 @@ module Toshi
       end
 
       def self.from_hsh(hash)
-        UnconfirmedTransaction.where(hsh: hash).first
+        UnconfirmedTransaction.find(hsh: hash)
       end
 
       def self.create_inputs(tx)
@@ -353,14 +352,13 @@ module Toshi
 
       def self.to_hash_collection(transactions)
         return [] unless transactions.any?
-        transaction_ids = transactions.map{|transaction| transaction.id }
+        transaction_ids = transactions.map(&:id)
 
         input_ids, output_ids = [], []
         input_amounts, input_address_ids, output_address_ids = {}, {}, {}
 
         # gather inputs and outputs
         Toshi.db[:unconfirmed_ledger_entries].where(transaction_id: transaction_ids).each{|entry|
-          transaction_id = entry[:transaction_id]
           if entry[:input_id]
             input_id = entry[:input_id]
             input_ids << input_id
@@ -375,27 +373,16 @@ module Toshi
           end
         }
 
-        inputs_by_hsh = {}
-        UnconfirmedInput.where(id: input_ids).each{|input|
-          inputs_by_hsh[input.hsh] ||= []
-          inputs_by_hsh[input.hsh] << input
-        }
-
-        outputs_by_hsh = {}
-        UnconfirmedOutput.where(id: output_ids).each{|output|
-          outputs_by_hsh[output.hsh] ||= []
-          outputs_by_hsh[output.hsh] << output
-        }
+        inputs_by_hsh  = UnconfirmedInput.where(id: input_ids).all.group_by(&:hsh)
+        outputs_by_hsh = UnconfirmedOutput.where(id: output_ids).all.group_by(&:hsh)
 
         # gather addresses
         addresses = {}
         address_ids = input_address_ids.values.flatten + output_address_ids.values.flatten
         UnconfirmedAddress.where(id: address_ids.uniq).each{|address| addresses[address.id] = address }
 
-        txs = []
-
         # construct the hashes
-        transactions.each{|transaction|
+        transactions.map do |transaction|
           tx = {}
           tx[:hash] = transaction.hsh
           #tx[:nid] = transaction.bitcoin_tx.normalized_hash # TODO: add
@@ -406,7 +393,7 @@ module Toshi
           # inputs
           tx[:inputs] = []
           if inputs_by_hsh.any?
-            inputs = inputs_by_hsh[transaction.hsh].sort_by{|input| input.position}
+            inputs = inputs_by_hsh[transaction.hsh].sort_by(&:position)
             inputs.each{|input|
               parsed_script = Bitcoin::Script.new(input.script)
               i = {}
@@ -447,9 +434,8 @@ module Toshi
           tx[:confirmations] = 0
           tx[:pool] = transaction.pool_name
 
-          txs << tx
-        }
-        txs
+          tx
+        end
       end
 
       def self.create_from_tx(tx, pool=MEMORY_POOL)

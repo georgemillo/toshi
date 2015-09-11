@@ -29,7 +29,7 @@ RSpec.configure do |config|
     DatabaseCleaner.clean_with :truncation
   end
 
-  config.before do |config|
+  config.before do
     DatabaseCleaner.strategy = :truncation
     DatabaseCleaner.start
     Sidekiq.redis { |c| c.flushdb }

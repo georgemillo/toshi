@@ -83,8 +83,8 @@ module Toshi
           return { error: 'malformed transaction' }.to_json
         end
 
-        if Toshi::Models::RawTransaction.where(hsh: ptx.hash).first ||
-            Toshi::Models::UnconfirmedRawTransaction.where(hsh: ptx.hash).first
+        if Toshi::Models::RawTransaction.find(hsh: ptx.hash) ||
+            Toshi::Models::UnconfirmedRawTransaction.find(hsh: ptx.hash)
           return { error: 'transaction already received' }.to_json
         end
 
@@ -112,8 +112,8 @@ module Toshi
       end
 
       get '/transactions/:hash.?:format?' do
-        @tx = (params[:hash].bytesize == 64 && Toshi::Models::Transaction.where(hsh: params[:hash]).first)
-        @tx ||= (params[:hash].bytesize == 64 && Toshi::Models::UnconfirmedTransaction.where(hsh: params[:hash]).first)
+        @tx = (params[:hash].bytesize == 64 && Toshi::Models::Transaction.find(hsh: params[:hash]))
+        @tx ||= (params[:hash].bytesize == 64 && Toshi::Models::UnconfirmedTransaction.find(hsh: params[:hash]))
         raise NotFoundError unless @tx
 
         format_data(@tx, format)
@@ -124,8 +124,8 @@ module Toshi
       ####
 
       get '/addresses/:address.?:format?' do
-        address = Toshi::Models::Address.where(address: params[:address]).first
-        address = Toshi::Models::UnconfirmedAddress.where(address: params[:address]).first unless address
+        address = Toshi::Models::Address.find(address: params[:address])
+        address = Toshi::Models::UnconfirmedAddress.find(address: params[:address]) unless address
         raise NotFoundError unless address
 
         case format
@@ -137,8 +137,8 @@ module Toshi
       end
 
       get '/addresses/:address/transactions.?:format?' do
-        address = Toshi::Models::Address.where(address: params[:address]).first
-        address = Toshi::Models::UnconfirmedAddress.where(address: params[:address]).first unless address
+        address = Toshi::Models::Address.find(address: params[:address])
+        address = Toshi::Models::UnconfirmedAddress.find(address: params[:address]) unless address
         raise NotFoundError unless address
 
         case format
@@ -150,7 +150,7 @@ module Toshi
       end
 
       get '/addresses/:address/unspent_outputs.?:format?' do
-        @address = Toshi::Models::Address.where(address: params[:address]).first
+        @address = Toshi::Models::Address.find(address: params[:address])
         raise NotFoundError unless @address
 
         case format
@@ -169,7 +169,7 @@ module Toshi
       end
 
       get '/addresses/:address/balance_at.?:format?' do
-        @address = Toshi::Models::Address.where(address: params[:address]).first
+        @address = Toshi::Models::Address.find(address: params[:address])
         raise NotFoundError unless @address
 
         time = params[:time]
@@ -195,11 +195,11 @@ module Toshi
       get '/search/:query.?:format?' do
         # block || tx
         if params[:query].bytesize == 64
-          if @block = Toshi::Models::Block.where(hsh: params[:query], branch: 0).first
+          if @block = Toshi::Models::Block.find(hsh: params[:query], branch: 0)
             path = 'blocks'
             hash = @block.hsh
           else
-            if @transaction = Toshi::Models::Transaction.where(hsh: params[:query]).first
+            if @transaction = Toshi::Models::Transaction.find(hsh: params[:query])
               path = 'transactions'
               hash = @transaction.hsh
             end
@@ -207,14 +207,14 @@ module Toshi
 
         # block height
         elsif /\A[0-9]+\Z/.match(params[:query])
-          if @block = Toshi::Models::Block.where(height: params[:query].to_i, branch: 0).first
+          if @block = Toshi::Models::Block.find(height: params[:query].to_i, branch: 0)
             path = 'blocks'
             hash = @block.hsh
           end
 
         # address hash
         elsif Bitcoin.valid_address?(params[:query])
-          if @address = Toshi::Models::Address.where(address: params[:query]).first
+          if @address = Toshi::Models::Address.find(address: params[:query])
             path = 'addresses'
             hash = @address.address
           end
