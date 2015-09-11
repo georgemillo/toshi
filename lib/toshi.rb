@@ -41,6 +41,7 @@ module Toshi
     autoload :RawBlock,                   'toshi/models/raw_block'
     autoload :RawTransaction,             'toshi/models/raw_transaction'
     autoload :Transaction,                'toshi/models/transaction'
+    autoload :TransactionShared,          'toshi/models/transaction_shared'
     autoload :UnconfirmedAddress,         'toshi/models/unconfirmed_address'
     autoload :UnconfirmedInput,           'toshi/models/unconfirmed_input'
     autoload :UnconfirmedOutput,          'toshi/models/unconfirmed_output'
