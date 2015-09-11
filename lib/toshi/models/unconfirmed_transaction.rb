@@ -352,7 +352,7 @@ module Toshi
 
       def self.to_hash_collection(transactions)
         return [] unless transactions.any?
-        transaction_ids = transactions.map{|transaction| transaction.id }
+        transaction_ids = transactions.map(&:id)
 
         input_ids, output_ids = [], []
         input_amounts, input_address_ids, output_address_ids = {}, {}, {}
@@ -393,7 +393,7 @@ module Toshi
           # inputs
           tx[:inputs] = []
           if inputs_by_hsh.any?
-            inputs = inputs_by_hsh[transaction.hsh].sort_by{|input| input.position}
+            inputs = inputs_by_hsh[transaction.hsh].sort_by(&:position)
             inputs.each{|input|
               parsed_script = Bitcoin::Script.new(input.script)
               i = {}

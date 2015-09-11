@@ -448,10 +448,10 @@ module Toshi
       # 4 queries per transaction array (7 if block info also requested)
       def self.to_hash_collection(transactions, options = {})
         return [] unless transactions.any?
+        transaction_ids = transactions.map(&:id)
 
         options[:show_block_info] ||= true
 
-        transaction_ids = transactions.map{|transaction| transaction.id }
 
         # gather blocks
         block_ids = []
@@ -511,7 +511,7 @@ module Toshi
           # inputs
           tx[:inputs] = []
           # NOTE: orphan tx inputs will show 0 amount from "unknown" address
-          inputs = inputs_by_hsh[transaction.hsh].sort_by{|input| input.position}
+          inputs = inputs_by_hsh[transaction.hsh].sort_by(&:position)
           inputs.each{|input|
             parsed_script = Bitcoin::Script.new(input.script)
             i = {}
