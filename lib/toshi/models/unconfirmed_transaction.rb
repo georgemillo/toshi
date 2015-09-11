@@ -373,27 +373,16 @@ module Toshi
           end
         }
 
-        inputs_by_hsh = {}
-        UnconfirmedInput.where(id: input_ids).each{|input|
-          inputs_by_hsh[input.hsh] ||= []
-          inputs_by_hsh[input.hsh] << input
-        }
-
-        outputs_by_hsh = {}
-        UnconfirmedOutput.where(id: output_ids).each{|output|
-          outputs_by_hsh[output.hsh] ||= []
-          outputs_by_hsh[output.hsh] << output
-        }
+        inputs_by_hsh  = UnconfirmedInput.where(id: input_ids).all.group_by(&:hsh)
+        outputs_by_hsh = UnconfirmedOutput.where(id: output_ids).all.group_by(&:hsh)
 
         # gather addresses
         addresses = {}
         address_ids = input_address_ids.values.flatten + output_address_ids.values.flatten
         UnconfirmedAddress.where(id: address_ids.uniq).each{|address| addresses[address.id] = address }
 
-        txs = []
-
         # construct the hashes
-        transactions.each{|transaction|
+        transactions.map do |transaction|
           tx = {}
           tx[:hash] = transaction.hsh
           #tx[:nid] = transaction.bitcoin_tx.normalized_hash # TODO: add
@@ -445,9 +434,8 @@ module Toshi
           tx[:confirmations] = 0
           tx[:pool] = transaction.pool_name
 
-          txs << tx
-        }
-        txs
+          tx
+        end
       end
 
       def self.create_from_tx(tx, pool=MEMORY_POOL)

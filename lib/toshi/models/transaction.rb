@@ -488,30 +488,19 @@ module Toshi
           end
         }
 
-        inputs_by_hsh = {}
-        Input.where(id: input_ids).each{|input|
-          inputs_by_hsh[input.hsh] ||= []
-          inputs_by_hsh[input.hsh] << input
-        }
-
-        outputs_by_hsh = {}
-        Output.where(id: output_ids).each{|output|
-          outputs_by_hsh[output.hsh] ||= []
-          outputs_by_hsh[output.hsh] << output
-        }
+        inputs_by_hsh  = Input.where(id: input_ids).all.group_by(&:hsh)
+        outputs_by_hsh = Output.where(id: output_ids).all.group_by(&:hsh)
 
         # gather addresses
         addresses = {}
         address_ids = input_address_ids.values.flatten + output_address_ids.values.flatten
         Address.where(id: address_ids.uniq).each{|address| addresses[address.id] = address }
 
-        txs = []
-
         # this is a query
         max_height = Block.max_height
 
         # construct the hashes
-        transactions.each{|transaction|
+        transactions.map do |transaction|
           tx = {}
           tx[:hash] = transaction.hsh
           #tx[:nid] = transaction.bitcoin_tx.normalized_hash # TODO: add
@@ -568,9 +557,8 @@ module Toshi
             end
           end
 
-          txs << tx
-        }
-        txs
+          tx
+        end
       end
 
       def to_json(options={})
