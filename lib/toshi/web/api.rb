@@ -271,9 +271,9 @@ module Toshi
       private
 
       def load_block
-        block = if hash == 'latest'
+        block = if params[:hash].to_s == 'latest'
                   Models::Block.head
-                elsif hash =~ /\A\d#{64}\z/
+                elsif params[:hash].to_s.size < 64
                   Models::Block.find(height: params[:hash], branch: 0)
                 else
                   Models::Block.find(hsh: params[:hash])
