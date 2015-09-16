@@ -3,7 +3,7 @@ module Toshi
     class UnconfirmedInput < Sequel::Model
 
       def transaction
-        @transaction ||= UnconfirmedTransaction.find(hsh: hsh)
+        @transaction ||= UnconfirmedTransaction.first(hsh: hsh)
       end
 
       def coinbase?

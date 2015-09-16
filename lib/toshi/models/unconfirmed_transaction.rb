@@ -22,7 +22,7 @@ module Toshi
       end
 
       def raw
-        UnconfirmedRawTransaction.find(hsh: hsh)
+        UnconfirmedRawTransaction.first(hsh: hsh)
       end
 
       def inputs
@@ -80,7 +80,7 @@ module Toshi
       end
 
       def self.from_hsh(hash)
-        UnconfirmedTransaction.find(hsh: hash)
+        UnconfirmedTransaction.first(hsh: hash)
       end
 
       def self.create_inputs(tx)

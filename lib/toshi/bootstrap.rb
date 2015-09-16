@@ -69,7 +69,7 @@ module Toshi
 
           t = Time.now.to_f
           result = processor.process_block(block, raise_errors=true)
-          b = Toshi::Models::Block.find(hsh: block.hash)
+          b = Toshi::Models::Block.first(hsh: block.hash)
 
           delta = (Time.now.to_f - t)
 

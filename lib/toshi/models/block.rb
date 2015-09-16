@@ -43,7 +43,7 @@ module Toshi
           locator << pointer.hsh
           depth = pointer.height - step
           break unless depth > 0
-          prev_block = Block.main_branch.find(height: depth)
+          prev_block = Block.main_branch.first(height: depth)
           break unless prev_block
           pointer = prev_block
           step *= 2  if locator.size > 10
@@ -117,7 +117,7 @@ module Toshi
       end
 
       def raw
-        RawBlock.find(hsh: hsh)
+        RawBlock.first(hsh: hsh)
       end
 
       # calculate additional fields not part of the protocol
@@ -145,14 +145,14 @@ module Toshi
       # <height> is this block's height. If nil, will be loaded automatically from the previous block and incremented.
       def self.create_from_block(block, height=nil, branch=Block::MAIN_BRANCH, output_cache=nil, prev_work=0)
         payload = block.payload || block.to_payload
-        RawBlock.new(hsh: block.hash, payload: Sequel.blob(payload)).save if !RawBlock.find(hsh: block.hash)
+        RawBlock.new(hsh: block.hash, payload: Sequel.blob(payload)).save if !RawBlock.first(hsh: block.hash)
 
-        height = height || ((Block.find(hsh: block.prev_block_hex).height rescue 0) + 1)
+        height = height || ((Block.first(hsh: block.prev_block_hex).height rescue 0) + 1)
 
         # calculate additional fields
         fields = calculate_additional_fields(block, branch)
 
-        b = Block.find(hsh: block.hash) || b = Block.new({
+        b = Block.first(hsh: block.hash) || b = Block.new({
           hsh:                block.hash,
           prev_block:         block.prev_block_hex,
           mrkl_root:          block.mrkl_root.reverse_hth,

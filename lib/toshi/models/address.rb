@@ -65,7 +65,7 @@ module Toshi
           hash[:received] = address.total_received
           hash[:sent] = address.total_sent
 
-          unconfirmed_address = UnconfirmedAddress.find(address: address.address)
+          unconfirmed_address = UnconfirmedAddress.first(address: address.address)
           hash[:unconfirmed_received] = unconfirmed_address ? unconfirmed_address.total_received : 0
           hash[:unconfirmed_sent] = unconfirmed_address ? unconfirmed_address.total_sent(address) : 0
           hash[:unconfirmed_balance] = unconfirmed_address ? unconfirmed_address.balance(address) : 0

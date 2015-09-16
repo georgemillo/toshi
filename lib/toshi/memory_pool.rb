@@ -27,7 +27,7 @@ module Toshi
 
     # Does the unspent output exist in the memory pool?
     def is_output_available?(tx_hash, position)
-      output = Toshi::Models::UnconfirmedOutput.find(hsh: tx_hash, position: position)
+      output = Toshi::Models::UnconfirmedOutput.first(hsh: tx_hash, position: position)
       return false if !output || !output.transaction.in_memory_pool?
       !output.spent
     end

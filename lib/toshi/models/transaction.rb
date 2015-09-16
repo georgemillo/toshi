@@ -51,11 +51,11 @@ module Toshi
       end
 
       def raw
-        RawTransaction.find(hsh: hsh)
+        RawTransaction.first(hsh: hsh)
       end
 
       def self.from_hsh(hash)
-        Transaction.find(hsh: hash)
+        Transaction.first(hsh: hash)
       end
 
       def self.create_inputs(tx, branch, output_cache)
@@ -396,7 +396,7 @@ module Toshi
       end
 
       def self.create_from_tx(tx, pool, branch, output_cache=nil, block=nil, index=0, total_received=nil, total_sent=nil)
-        RawTransaction.new(hsh: tx.hash, payload: Sequel.blob(tx.payload)).save if !RawTransaction.find(hsh: tx.hash)
+        RawTransaction.new(hsh: tx.hash, payload: Sequel.blob(tx.payload)).save if !RawTransaction.first(hsh: tx.hash)
 
         fields = tx.additional_fields || {}
 

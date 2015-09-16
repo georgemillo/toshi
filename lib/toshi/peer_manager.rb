@@ -59,7 +59,7 @@ module Toshi
 
     # retrieve a connection given an address of form "IP:port"
     def get_conn_by_addr addr
-      @connections.find{|conn| conn.peer_addr == addr }
+      @connections.first{|conn| conn.peer_addr == addr }
     end
 
     def clear_peers

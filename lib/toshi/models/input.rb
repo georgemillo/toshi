@@ -3,19 +3,19 @@ module Toshi
     class Input < Sequel::Model
 
       def previous_output
-        @previous_output ||= Output.find(hsh: prev_out, position: index)
+        @previous_output ||= Output.first(hsh: prev_out, position: index)
       end
 
       def previous_transaction
-        @previous_transaction ||= Transaction.find(hsh: prev_out)
+        @previous_transaction ||= Transaction.first(hsh: prev_out)
       end
 
       def transaction
-        @transaction ||= Transaction.find(hsh: hsh)
+        @transaction ||= Transaction.first(hsh: hsh)
       end
 
       def transaction_pool
-        @transaction_pool ||= Transaction.find(hsh: hsh).pool
+        @transaction_pool ||= Transaction.first(hsh: hsh).pool
       end
 
       def coinbase?

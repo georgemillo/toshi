@@ -8,9 +8,9 @@ module Toshi
       sidekiq_options queue: :transactions, :retry => true
 
       def perform(tx_hash, _sender)
-        return if Toshi::Models::Transaction.find(hsh: tx_hash)
-        return if Toshi::Models::UnconfirmedTransaction.find(hsh: tx_hash)
-        tx = Toshi::Models::UnconfirmedRawTransaction.find(hsh: tx_hash)
+        return if Toshi::Models::Transaction.first(hsh: tx_hash)
+        return if Toshi::Models::UnconfirmedTransaction.first(hsh: tx_hash)
+        tx = Toshi::Models::UnconfirmedRawTransaction.first(hsh: tx_hash)
         return unless tx
 
         begin

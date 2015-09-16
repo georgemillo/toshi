@@ -22,7 +22,7 @@ module Toshi
 
       # unconfirmed balance
       def balance(address_model=nil)
-        address_model ||= Address.find(address: address)
+        address_model ||= Address.first(address: address)
         total_received - total_sent(address_model)
       end
 

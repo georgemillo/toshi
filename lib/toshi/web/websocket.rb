@@ -115,7 +115,7 @@ module Toshi
 
       # send a block to a connected websocket
       def on_channel_send_block(msg)
-        block = Toshi::Models::Block.find(hsh: msg['hash'])
+        block = Toshi::Models::Block.first(hsh: msg['hash'])
         return unless block
         write_socket({ subscription: 'blocks', data: block.to_hash }.to_json)
       end
