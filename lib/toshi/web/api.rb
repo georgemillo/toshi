@@ -274,9 +274,9 @@ module Toshi
         block = if params[:hash].to_s == 'latest'
                   Models::Block.head
                 elsif params[:hash].to_s =~ /\A\d{,64}\z/
-                  Models::Block.find(height: params[:hash], branch: 0)
+                  Models::Block.first(height: params[:hash], branch: 0)
                 else
-                  Models::Block.find(hsh: params[:hash])
+                  Models::Block.first(hsh: params[:hash])
                 end
         block || raise(NotFoundError)
       end
